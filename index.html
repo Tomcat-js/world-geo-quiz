@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Africa Map Quiz</title>
+<title>World Geography Quiz</title>
 <style>
   :root{
     --bg:#eef5f7;
@@ -16,6 +16,7 @@
     --good:#3aa655;
     --bad:#d1495b;
     --accent:#3a7ca5;
+    --soon:#bcb9a6;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
@@ -39,6 +40,35 @@
     padding:9px 18px;font-size:0.9rem;font-weight:600;cursor:pointer;
   }
   main{flex:1;width:100%;display:flex;flex-direction:column;align-items:center;padding:6px 12px 0;}
+  .screen{display:none;width:100%;flex-direction:column;align-items:center;}
+  .screen.show{display:flex;}
+
+  /* World map screen */
+  .world-wrap{
+    position:relative;width:min(880px,94vw);aspect-ratio:1000/500;
+    margin:10px auto 8px;background:var(--sea);border-radius:14px;
+    box-shadow:0 4px 18px rgba(0,0,0,0.12);overflow:hidden;
+  }
+  .world-wrap svg{position:absolute;top:0;left:0;width:100%;height:100%;display:block;}
+  .continent{stroke:#33433f;stroke-width:1.4;cursor:pointer;transition:fill .15s ease, opacity .15s ease;}
+  .continent.playable{fill:#7bbf6a;}
+  .continent.playable:hover{fill:#67ad57;}
+  .continent.soon{fill:var(--soon);cursor:not-allowed;}
+  .continent.soon:hover{fill:#aaa78f;}
+  .continent-label{font-size:15px;font-weight:700;fill:#20302c;pointer-events:none;text-anchor:middle;paint-order:stroke;stroke:#fff;stroke-width:3px;}
+  .continent-badge{font-size:12px;font-weight:700;fill:#1d6b34;pointer-events:none;text-anchor:middle;paint-order:stroke;stroke:#fff;stroke-width:3px;}
+  .legend{display:flex;justify-content:center;gap:18px;font-size:0.82rem;color:#4a5a5a;margin:2px 0 10px;flex-wrap:wrap;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .swatch{width:13px;height:13px;border-radius:3px;display:inline-block;border:1px solid #33433f33;}
+  .toast{
+    position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:#1f2d2d;color:#fff;padding:10px 18px;border-radius:10px;font-size:0.9rem;
+    opacity:0;transition:opacity .25s ease, transform .25s ease;pointer-events:none;z-index:200;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* Game screen (per-continent) */
+  .game-header-row{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:2px;}
   .map-wrap{
     position:relative;width:min(880px,94vw);aspect-ratio:1000/926.64;
     margin:6px auto 8px;background:var(--sea);border-radius:14px;
@@ -48,47 +78,25 @@
   .map-wrap svg{position:absolute;top:0;left:0;width:100%;height:100%;display:block;}
   .map-wrap path.country{
     fill:var(--land); stroke:var(--land-border); stroke-width:1.4; cursor:default;
-    transition:fill .1s ease, stroke .1s ease;
+    transition:fill .25s ease;
   }
-  .map-wrap path.country.solved{fill:#a9d6a1; pointer-events:none;}
+  .map-wrap path.country.solved{fill:#a9d6a1;}
   .map-wrap path.country.flash-bad{fill:#f3b6bd;}
-  .map-wrap path.country.hover{fill:#ffe066; stroke:#e6a400; stroke-width:2.2;}
   .pins-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
   .pin{
-    position:absolute;transform:translate(-50%,-100%);
+    position:absolute;transform:translate(-50%,-50%);
     pointer-events:auto;touch-action:none;
-    display:flex;flex-direction:column;align-items:center;
-    cursor:grab; user-select:none;
-    z-index:5;
-  }
-  .pin-card{
     background:var(--tile);border:2px solid var(--tile-border);border-radius:8px;
     padding:4px 9px;font-size:0.72rem;font-weight:700;white-space:nowrap;
-    box-shadow:0 2px 5px rgba(0,0,0,0.25);
+    box-shadow:0 2px 5px rgba(0,0,0,0.25); cursor:grab; user-select:none;
+    z-index:5;
   }
-  .pin-tip{
-    width:0;height:0;margin-top:-1px;
-    border-left:7px solid transparent;border-right:7px solid transparent;
-    border-top:9px solid var(--tile-border);
-    position:relative;
-  }
-  .pin-tip::after{
-    content:"";position:absolute;top:-9px;left:-5px;width:0;height:0;
-    border-left:5px solid transparent;border-right:5px solid transparent;
-    border-top:7px solid var(--tile);
-  }
-  .pin.locked .pin-card{
-    border-color:var(--good); color:#1d6b34; background:#eaf8ea;
+  .pin.locked{
+    border-color:var(--good); color:#1d6b34; cursor:default; background:#eaf8ea;
     box-shadow:none;
   }
-  .pin.locked .pin-tip{border-top-color:var(--good);}
-  .pin.locked .pin-tip::after{border-top-color:#eaf8ea;}
-  .pin.locked{cursor:default;}
-  .pin.wrong-flash .pin-card{border-color:var(--bad); background:#fde7ea; color:var(--bad);}
-  .pin.wrong-flash .pin-tip{border-top-color:var(--bad);}
-  .pin.wrong-flash .pin-tip::after{border-top-color:#fde7ea;}
-  .pin.dragging{z-index:50; cursor:grabbing;}
-  .pin.dragging .pin-card{box-shadow:0 6px 14px rgba(0,0,0,0.3);}
+  .pin.wrong-flash{border-color:var(--bad); background:#fde7ea; color:var(--bad);}
+  .pin.dragging{z-index:50; box-shadow:0 6px 14px rgba(0,0,0,0.3); cursor:grabbing;}
   .tray-wrap{width:100%;max-width:900px;padding:6px 10px 18px;}
   .tray-label{text-align:center;font-size:0.82rem;color:#4a5a5a;margin:2px 0 8px;}
   .tray{
@@ -125,43 +133,67 @@
 </style>
 </head>
 <body>
-<header>
-  <h1>🌍 Africa Map Quiz</h1>
-  <p class="subtitle">Drag each country name onto its place on the map.</p>
-</header>
 
-<div class="statbar">
-  <span class="pill correct">✅ <span id="stat-correct">0</span> / <span id="stat-total">54</span></span>
-  <span class="pill wrong">Attempts: <span id="stat-attempts">0</span></span>
-</div>
+<!-- ============ WORLD SCREEN ============ -->
+<section class="screen show" id="screen-world">
+  <header>
+    <h1>🌍 World Geography Quiz</h1>
+    <p class="subtitle">Tap a continent to start playing. More continents are on the way!</p>
+  </header>
+  <div class="world-wrap" id="worldWrap">
+    <svg id="worldSvg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+  <div class="legend">
+    <span><span class="swatch" style="background:#7bbf6a;"></span> Ready to play</span>
+    <span><span class="swatch" style="background:var(--soon);"></span> Coming soon</span>
+  </div>
+</section>
 
-<main>
-  <div class="map-wrap" id="mapWrap">
-    <svg id="mapSvg" viewBox="0 0 1000 926.64" preserveAspectRatio="xMidYMid meet"></svg>
-    <div class="pins-layer" id="pinsLayer"></div>
+<!-- ============ GAME SCREEN (per continent) ============ -->
+<section class="screen" id="screen-game">
+  <header>
+    <div class="game-header-row">
+      <button class="secondary" id="backBtn">&larr; World map</button>
+      <h1 id="gameTitle" style="margin:0;">Africa Map Quiz</h1>
+    </div>
+    <p class="subtitle">Drag each country name onto its place on the map.</p>
+  </header>
+
+  <div class="statbar">
+    <span class="pill correct">✅ <span id="stat-correct">0</span> / <span id="stat-total">0</span></span>
+    <span class="pill wrong">Attempts: <span id="stat-attempts">0</span></span>
   </div>
 
-  <div class="controls">
-    <button class="action" id="checkBtn">Check answers</button>
-    <button class="secondary" id="resetBtn">Restart game</button>
+  <main>
+    <div class="map-wrap" id="mapWrap">
+      <svg id="mapSvg" viewBox="0 0 1000 926.64" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="pins-layer" id="pinsLayer"></div>
+    </div>
+
+    <div class="controls">
+      <button class="action" id="checkBtn">Check answers</button>
+      <button class="secondary" id="resetBtn">Restart this continent</button>
+    </div>
+    <p class="hint">Drag a name tile onto the country you think it is, then press <b>Check answers</b>. Correct ones lock onto the map in green. Wrong ones go back to the list, and new countries take their place.</p>
+  </main>
+
+  <div class="tray-wrap">
+    <p class="tray-label">Drag these names onto the map:</p>
+    <div class="tray" id="tray"></div>
   </div>
-  <p class="hint">Drag a name tile onto the country you think it is, then press <b>Check answers</b>. Correct ones lock onto the map in green. Wrong ones go back to the list, and new countries take their place.</p>
-</main>
+</section>
 
-<div class="tray-wrap">
-  <p class="tray-label">Drag these names onto the map:</p>
-  <div class="tray" id="tray"></div>
-</div>
-
-<footer>MVP build — Africa edition. More continents, logins, capitals and more coming soon.</footer>
+<footer>MVP build &mdash; Africa is playable now, other continents are coming soon.</footer>
 
 <div class="win-overlay" id="winOverlay">
   <div class="win-card">
-    <h2>🎉 You mapped all of Africa!</h2>
+    <h2>🎉 You mapped it all!</h2>
     <p id="winStats"></p>
     <button class="action" id="playAgainBtn">Play again</button>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 /* ===== COUNTRY DATA (generated) ===== */
@@ -228,29 +260,181 @@ if (typeof module !== "undefined" && module.exports) { module.exports = { AFRICA
 /* ===== END COUNTRY DATA ===== */
 </script>
 <script>
+/* ===== WORLD CONTINENT SHAPES (generated) ===== */
+var WORLD_CONTINENTS = [
+  {
+    "id": "north-america",
+    "name": "North America",
+    "playable": false,
+    "group": "north-america",
+    "d": "M41.7,61.1 L83.3,55.6 L166.7,50 L236.1,47.2 L305.6,61.1 L347.2,83.3 L355.6,116.7 L319.4,125 L291.7,152.8 L277.8,177.8 L258.3,191.7 L230.6,205.6 L250,211.1 L266.7,227.8 L244.4,200 L208.3,191.7 L180.6,166.7 L161.1,144.4 L155.6,122.2 L138.9,97.2 L111.1,83.3 L41.7,83.3 Z",
+    "cx": 212.4,
+    "cy": 129.8
+  },
+  {
+    "id": "greenland",
+    "name": "Greenland",
+    "playable": false,
+    "group": "north-america",
+    "d": "M375,83.3 L430.6,80.6 L444.4,55.6 L416.7,36.1 L375,41.7 L347.2,61.1 L375,83.3 Z",
+    "cx": 394.8,
+    "cy": 63.1
+  },
+  {
+    "id": "south-america",
+    "name": "South America",
+    "playable": false,
+    "group": "south-america",
+    "d": "M286.1,216.7 L302.8,219.4 L333.3,222.2 L361.1,236.1 L402.8,263.9 L402.8,277.8 L388.9,313.9 L366.7,319.4 L338.9,347.2 L311.1,402.8 L300,394.4 L305.6,361.1 L302.8,333.3 L305.6,300 L283.3,263.9 L277.8,244.4 L286.1,216.7 Z",
+    "cx": 326.8,
+    "cy": 290.2
+  },
+  {
+    "id": "europe",
+    "name": "Europe",
+    "playable": false,
+    "group": "europe",
+    "d": "M472.2,130.6 L475,105.6 L486.1,88.9 L513.9,77.8 L541.7,61.1 L577.8,52.8 L583.3,83.3 L611.1,122.2 L577.8,136.1 L550,138.9 L533.3,125 L505.6,130.6 L486.1,130.6 L472.2,130.6 Z",
+    "cx": 527.6,
+    "cy": 108.2
+  },
+  {
+    "id": "africa",
+    "name": "Africa",
+    "playable": true,
+    "group": "africa",
+    "d": "M452.8,191.7 L455.6,208.3 L466.7,230.6 L475,236.1 L508.3,236.1 L525,238.9 L525,255.6 L533.3,266.7 L536.1,291.7 L550,311.1 L550,327.8 L555.6,344.4 L577.8,341.7 L591.7,319.4 L591.7,305.6 L597.2,291.7 L611.1,283.3 L616.7,250 L641.7,222.2 L622.2,216.7 L619.4,219.4 L605.6,208.3 L597.2,208.3 L602.8,188.9 L591.7,163.9 L569.4,158.3 L527.8,147.2 L494.4,152.8 L483.3,158.3 L475,166.7 L452.8,191.7 Z",
+    "cx": 548.5,
+    "cy": 236.6
+  },
+  {
+    "id": "asia",
+    "name": "Asia",
+    "playable": false,
+    "group": "asia",
+    "d": "M575,133.3 L572.2,97.2 L597.2,83.3 L625,66.7 L666.7,55.6 L708.3,50 L750,47.2 L805.6,47.2 L861.1,50 L888.9,83.3 L897.2,105.6 L888.9,125 L894.4,130.6 L888.9,150 L861.1,158.3 L838.9,163.9 L838.9,180.6 L816.7,188.9 L802.8,200 L791.7,222.2 L772.2,227.8 L763.9,205.6 L750,188.9 L722.2,200 L713.9,227.8 L702.8,200 L688.9,180.6 L669.4,180.6 L652.8,175 L638.9,166.7 L622.2,166.7 L611.1,147.2 L597.2,144.4 L575,133.3 Z",
+    "cx": 736.8,
+    "cy": 143.6
+  },
+  {
+    "id": "oceania",
+    "name": "Australia & Oceania",
+    "playable": false,
+    "group": "oceania",
+    "d": "M813.9,311.1 L816.7,344.4 L833.3,344.4 L861.1,338.9 L880.6,347.2 L888.9,355.6 L908.3,355.6 L916.7,352.8 L925,327.8 L925,311.1 L902.8,291.7 L894.4,280.6 L869.4,283.3 L858.3,291.7 L844.4,297.2 L813.9,311.1 Z",
+    "cx": 872,
+    "cy": 321.5
+  }
+];
+// viewBox: 0 0 1000 500
+if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
+
+/* ===== END WORLD CONTINENT SHAPES ===== */
+</script>
+<script>
 (function(){
   "use strict";
 
   const SVG_NS = "http://www.w3.org/2000/svg";
+
+  /* Per-continent datasets. Only Africa has real data so far; others show "coming soon". */
+  const CONTINENT_DATASETS = {
+    "africa": { countries: AFRICA_COUNTRIES, viewBox: "0 0 1000 926.64", title: "Africa Map Quiz" }
+  };
+
+  /* ---------------- WORLD SCREEN ---------------- */
+  const screenWorld = document.getElementById("screen-world");
+  const screenGame = document.getElementById("screen-game");
+  const worldSvg = document.getElementById("worldSvg");
+  const toastEl = document.getElementById("toast");
+
+  let toastTimer = null;
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
+  }
+
+  function showScreen(name){
+    screenWorld.classList.toggle("show", name === "world");
+    screenGame.classList.toggle("show", name === "game");
+  }
+
+  function buildWorldMap(){
+    worldSvg.innerHTML = "";
+    WORLD_CONTINENTS.forEach(c => {
+      const path = document.createElementNS(SVG_NS, "path");
+      path.setAttribute("d", c.d);
+      path.setAttribute("class", "continent " + (c.playable ? "playable" : "soon"));
+      path.setAttribute("data-id", c.id);
+      path.addEventListener("click", () => onContinentClick(c));
+      worldSvg.appendChild(path);
+
+      const label = document.createElementNS(SVG_NS, "text");
+      label.setAttribute("x", c.cx);
+      label.setAttribute("y", c.cy);
+      label.setAttribute("class", "continent-label");
+      label.textContent = c.name;
+      label.style.pointerEvents = "none";
+      worldSvg.appendChild(label);
+
+      if(c.playable){
+        const badge = document.createElementNS(SVG_NS, "text");
+        badge.setAttribute("x", c.cx);
+        badge.setAttribute("y", c.cy + 16);
+        badge.setAttribute("class", "continent-badge");
+        badge.setAttribute("id", "badge-" + c.id);
+        worldSvg.appendChild(badge);
+      }
+    });
+    refreshWorldBadges();
+  }
+
+  function refreshWorldBadges(){
+    Object.keys(CONTINENT_DATASETS).forEach(id => {
+      const ds = CONTINENT_DATASETS[id];
+      const state = gameState[id];
+      const solvedCount = state ? state.solved.size : 0;
+      const total = ds.countries.length;
+      const badge = document.getElementById("badge-" + id);
+      if(badge) badge.textContent = solvedCount + "/" + total;
+      const path = worldSvg.querySelector('path[data-id="' + id + '"]');
+      if(path){
+        const frac = total ? solvedCount / total : 0;
+        path.style.opacity = 0.55 + frac * 0.45;
+      }
+    });
+  }
+
+  function onContinentClick(c){
+    if(!c.playable || !CONTINENT_DATASETS[c.id]){
+      showToast(c.name + " is coming soon!");
+      return;
+    }
+    openContinent(c.id);
+  }
+
+  /* ---------------- GAME SCREEN ---------------- */
   const svg = document.getElementById("mapSvg");
   const pinsLayer = document.getElementById("pinsLayer");
   const mapWrap = document.getElementById("mapWrap");
   const tray = document.getElementById("tray");
   const checkBtn = document.getElementById("checkBtn");
   const resetBtn = document.getElementById("resetBtn");
+  const backBtn = document.getElementById("backBtn");
   const playAgainBtn = document.getElementById("playAgainBtn");
   const winOverlay = document.getElementById("winOverlay");
   const winStats = document.getElementById("winStats");
   const statCorrect = document.getElementById("stat-correct");
   const statTotal = document.getElementById("stat-total");
   const statAttempts = document.getElementById("stat-attempts");
+  const gameTitle = document.getElementById("gameTitle");
 
   const ACTIVE_SIZE = 4;
-  const byCode = {};
-  AFRICA_COUNTRIES.forEach(c => byCode[c.code] = c);
-  statTotal.textContent = AFRICA_COUNTRIES.length;
-
-  let pool, active, placements, solved, attempts;
+  let currentId = null;
+  let byCode = {};
+  const gameState = {}; // id -> {pool, active, placements, solved, attempts}
 
   function shuffle(arr){
     const a = arr.slice();
@@ -261,20 +445,44 @@ if (typeof module !== "undefined" && module.exports) { module.exports = { AFRICA
     return a;
   }
 
-  function initGame(){
-    pool = shuffle(AFRICA_COUNTRIES.map(c=>c.code));
-    active = pool.splice(0, ACTIVE_SIZE);
-    placements = {};
-    solved = new Set();
-    attempts = 0;
-    winOverlay.classList.remove("show");
-    buildMap();
-    renderAll();
+  function freshState(countries){
+    return {
+      pool: shuffle(countries.map(c=>c.code)),
+      active: [],
+      placements: {},
+      solved: new Set(),
+      attempts: 0
+    };
   }
 
-  function buildMap(){
+  function openContinent(id){
+    const ds = CONTINENT_DATASETS[id];
+    currentId = id;
+    byCode = {};
+    ds.countries.forEach(c => byCode[c.code] = c);
+
+    if(!gameState[id]){
+      const st = freshState(ds.countries);
+      st.active = st.pool.splice(0, ACTIVE_SIZE);
+      gameState[id] = st;
+    }
+
+    gameTitle.textContent = ds.title;
+    statTotal.textContent = ds.countries.length;
+    svg.setAttribute("viewBox", ds.viewBox);
+    mapWrap.style.aspectRatio = ds.viewBox.split(" ").slice(2).join("/").replace(" ", "/");
+
+    winOverlay.classList.remove("show");
+    buildMap(ds.countries);
+    renderAll();
+    showScreen("game");
+  }
+
+  function state(){ return gameState[currentId]; }
+
+  function buildMap(countries){
     svg.innerHTML = "";
-    AFRICA_COUNTRIES.forEach(c => {
+    countries.forEach(c => {
       const path = document.createElementNS(SVG_NS, "path");
       path.setAttribute("d", c.d);
       path.setAttribute("class", "country");
@@ -289,22 +497,33 @@ if (typeof module !== "undefined" && module.exports) { module.exports = { AFRICA
   }
 
   function updateStats(){
-    statCorrect.textContent = solved.size;
-    statAttempts.textContent = attempts;
+    const st = state();
+    statCorrect.textContent = st.solved.size;
+    statAttempts.textContent = st.attempts;
   }
 
   function renderAll(){
     renderTray();
     renderPins();
     updateStats();
+    markSolvedOnMap();
+  }
+
+  function markSolvedOnMap(){
+    const st = state();
+    Object.keys(byCode).forEach(code => {
+      const p = pathFor(code);
+      if(p) p.classList.toggle("solved", st.solved.has(code));
+    });
   }
 
   function renderTray(){
     tray.innerHTML = "";
-    active.forEach(code => {
+    const st = state();
+    st.active.forEach(code => {
       const slot = document.createElement("div");
       slot.className = "slot";
-      if(placements[code]){
+      if(st.placements[code]){
         slot.classList.add("empty-slot");
       } else {
         const tile = makeTile(code);
@@ -319,38 +538,31 @@ if (typeof module !== "undefined" && module.exports) { module.exports = { AFRICA
     tile.className = "tile";
     tile.textContent = byCode[code].name;
     tile.dataset.code = code;
-    attachDrag(tile, code, "tray");
+    attachDrag(tile, code);
     return tile;
-  }
-
-  function makePinEl(name, extraClass){
-    const pin = document.createElement("div");
-    pin.className = extraClass ? "pin " + extraClass : "pin";
-    const card = document.createElement("div");
-    card.className = "pin-card";
-    card.textContent = name;
-    const tip = document.createElement("div");
-    tip.className = "pin-tip";
-    pin.appendChild(card);
-    pin.appendChild(tip);
-    return pin;
   }
 
   function renderPins(){
     pinsLayer.innerHTML = "";
-    active.forEach(code => {
-      const p = placements[code];
+    const st = state();
+    st.active.forEach(code => {
+      const p = st.placements[code];
       if(!p) return;
-      const pin = makePinEl(byCode[code].name);
+      const pin = document.createElement("div");
+      pin.className = "pin";
+      pin.textContent = byCode[code].name;
       pin.dataset.code = code;
       pin.style.left = p.xPct + "%";
       pin.style.top = p.yPct + "%";
-      attachDrag(pin, code, "map");
+      attachDrag(pin, code);
       pinsLayer.appendChild(pin);
     });
-    solved.forEach(code => {
+    st.solved.forEach(code => {
       const c = byCode[code];
-      const pin = makePinEl(c.name, "locked");
+      if(!c) return;
+      const pin = document.createElement("div");
+      pin.className = "pin locked";
+      pin.textContent = c.name;
       const pct = svgPointToPct(c.cx, c.cy);
       pin.style.left = pct.xPct + "%";
       pin.style.top = pct.yPct + "%";
@@ -359,43 +571,35 @@ if (typeof module !== "undefined" && module.exports) { module.exports = { AFRICA
   }
 
   function svgPointToPct(x, y){
-    return { xPct: (x/1000)*100, yPct: (y/926.64)*100 };
+    const vb = svg.getAttribute("viewBox").split(" ").map(Number);
+    return { xPct: (x/vb[2])*100, yPct: (y/vb[3])*100 };
   }
 
   /* ---- Drag handling (pointer events, mouse+touch+pen) ---- */
-  function attachDrag(el, code, origin){
-    el.addEventListener("pointerdown", (ev) => startDrag(ev, el, code, origin));
+  function attachDrag(el, code){
+    el.addEventListener("pointerdown", (ev) => startDrag(ev, el, code));
   }
 
-  let hoveredPath = null;
-  function setHover(pathEl){
-    if(pathEl === hoveredPath) return;
-    if(hoveredPath) hoveredPath.classList.remove("hover");
-    hoveredPath = pathEl;
-    if(hoveredPath) hoveredPath.classList.add("hover");
-  }
-
-  function startDrag(ev, el, code, origin){
+  function startDrag(ev, el, code){
     ev.preventDefault();
-    const ghost = makePinEl(byCode[code].name, "dragging");
+    const startRect = el.getBoundingClientRect();
+    const ghost = document.createElement("div");
+    ghost.className = "pin dragging";
+    ghost.textContent = byCode[code].name;
     ghost.style.position = "fixed";
-    ghost.style.left = ev.clientX + "px";
-    ghost.style.top = ev.clientY + "px";
-    ghost.style.pointerEvents = "none";
+    ghost.style.left = (startRect.left + startRect.width/2) + "px";
+    ghost.style.top = (startRect.top + startRect.height/2) + "px";
     document.body.appendChild(ghost);
     el.style.visibility = "hidden";
 
     function move(e){
       ghost.style.left = e.clientX + "px";
       ghost.style.top = e.clientY + "px";
-      const overEl = document.elementFromPoint(e.clientX, e.clientY);
-      const path = (overEl && overEl.matches && overEl.matches('path[data-code]')) ? overEl : null;
-      setHover(path);
     }
     function up(e){
       document.removeEventListener("pointermove", move);
       document.removeEventListener("pointerup", up);
-      setHover(null);
+      ghost.style.display = "none";
       const dropEl = document.elementFromPoint(e.clientX, e.clientY);
       ghost.remove();
       el.style.visibility = "visible";
@@ -406,11 +610,12 @@ if (typeof module !== "undefined" && module.exports) { module.exports = { AFRICA
   }
 
   function handleDrop(code, clientX, clientY, dropEl){
+    const st = state();
     const trayRect = tray.getBoundingClientRect();
     const overTray = clientX >= trayRect.left && clientX <= trayRect.right &&
                       clientY >= trayRect.top && clientY <= trayRect.bottom;
     if(overTray){
-      delete placements[code];
+      delete st.placements[code];
       renderAll();
       return;
     }
@@ -418,8 +623,7 @@ if (typeof module !== "undefined" && module.exports) { module.exports = { AFRICA
     const overMap = clientX >= wrapRect.left && clientX <= wrapRect.right &&
                      clientY >= wrapRect.top && clientY <= wrapRect.bottom;
     if(!overMap){
-      // dropped somewhere neutral -> snap back to tray
-      delete placements[code];
+      delete st.placements[code];
       renderAll();
       return;
     }
@@ -428,20 +632,22 @@ if (typeof module !== "undefined" && module.exports) { module.exports = { AFRICA
       : null;
     const xPct = ((clientX - wrapRect.left) / wrapRect.width) * 100;
     const yPct = ((clientY - wrapRect.top) / wrapRect.height) * 100;
-    placements[code] = { xPct, yPct, hitCode };
+    st.placements[code] = { xPct, yPct, hitCode };
     renderAll();
   }
 
   /* ---- Check answers ---- */
   function checkAnswers(){
-    const placedCodes = active.filter(code => placements[code]);
+    const st = state();
+    const ds = CONTINENT_DATASETS[currentId];
+    const placedCodes = st.active.filter(code => st.placements[code]);
     if(placedCodes.length === 0) return;
-    attempts++;
+    st.attempts++;
 
     const correctCodes = [];
     const wrongCodes = [];
     placedCodes.forEach(code => {
-      if(placements[code].hitCode === code){
+      if(st.placements[code].hitCode === code){
         correctCodes.push(code);
       } else {
         wrongCodes.push(code);
@@ -453,7 +659,7 @@ if (typeof module !== "undefined" && module.exports) { module.exports = { AFRICA
       if(p) p.classList.add("solved");
     });
     wrongCodes.forEach(code => {
-      const p = pathFor(placements[code].hitCode);
+      const p = pathFor(st.placements[code].hitCode);
       if(p){
         p.classList.add("flash-bad");
         setTimeout(() => p.classList.remove("flash-bad"), 600);
@@ -461,30 +667,54 @@ if (typeof module !== "undefined" && module.exports) { module.exports = { AFRICA
     });
 
     setTimeout(() => {
-      correctCodes.forEach(code => { solved.add(code); delete placements[code]; });
-      wrongCodes.forEach(code => { delete placements[code]; });
+      correctCodes.forEach(code => { st.solved.add(code); delete st.placements[code]; });
+      wrongCodes.forEach(code => { delete st.placements[code]; });
 
-      active = active.filter(code => !correctCodes.includes(code));
-      const need = ACTIVE_SIZE - active.length;
-      const refill = pool.splice(0, Math.min(need, pool.length));
-      active = active.concat(refill);
+      st.active = st.active.filter(code => !correctCodes.includes(code));
+      const need = ACTIVE_SIZE - st.active.length;
+      const refill = st.pool.splice(0, Math.min(need, st.pool.length));
+      st.active = st.active.concat(refill);
 
       renderAll();
+      refreshWorldBadges();
 
-      if(solved.size === AFRICA_COUNTRIES.length){
-        winStats.textContent = "You solved all " + AFRICA_COUNTRIES.length + " countries in " + attempts + " checks.";
+      if(st.solved.size === ds.countries.length){
+        winStats.textContent = "You solved all " + ds.countries.length + " countries in " + st.attempts + " checks.";
         winOverlay.classList.add("show");
       }
     }, correctCodes.length || wrongCodes.length ? 450 : 0);
   }
 
   checkBtn.addEventListener("click", checkAnswers);
-  resetBtn.addEventListener("click", () => { if(confirm("Restart the game from scratch?")) initGame(); });
-  playAgainBtn.addEventListener("click", initGame);
+  resetBtn.addEventListener("click", () => {
+    if(confirm("Restart this continent from scratch?")){
+      const ds = CONTINENT_DATASETS[currentId];
+      const st = freshState(ds.countries);
+      st.active = st.pool.splice(0, ACTIVE_SIZE);
+      gameState[currentId] = st;
+      winOverlay.classList.remove("show");
+      renderAll();
+      refreshWorldBadges();
+    }
+  });
+  playAgainBtn.addEventListener("click", () => {
+    const ds = CONTINENT_DATASETS[currentId];
+    const st = freshState(ds.countries);
+    st.active = st.pool.splice(0, ACTIVE_SIZE);
+    gameState[currentId] = st;
+    winOverlay.classList.remove("show");
+    renderAll();
+    refreshWorldBadges();
+  });
+  backBtn.addEventListener("click", () => {
+    showScreen("world");
+    refreshWorldBadges();
+  });
 
-  window.addEventListener("resize", () => { renderPins(); });
+  window.addEventListener("resize", () => { if(screenGame.classList.contains("show")) renderPins(); });
 
-  initGame();
+  buildWorldMap();
+  showScreen("world");
 })();
 </script>
 </body>
