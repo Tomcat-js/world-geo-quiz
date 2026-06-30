@@ -195,7 +195,7 @@
       <button class="action" id="checkBtn">Check answers</button>
       <button class="secondary" id="resetBtn">Restart this continent</button>
     </div>
-    <p class="hint">Drag a name tile onto the country you think it is, then press <b>Check answers</b>. Correct ones lock onto the map in green. Wrong ones get revealed on their real country in red &mdash; so you can learn it &mdash; and new countries take their place. The first time you pick up a name, you'll hear it spoken aloud.</p>
+    <p class="hint">Drag a name tile onto the country you think it is, then press <b>Check answers</b>. Correct ones lock onto the map in green. Wrong ones get revealed on their real country in red &mdash; so you can learn it &mdash; and new countries take their place. Pick up a name and you'll hear it spoken aloud.</p>
   </main>
 
   <div class="tray-wrap">
@@ -705,11 +705,7 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
 
   function startDrag(ev, el, code){
     ev.preventDefault();
-    const st = state();
-    if(st && !st.spoken.has(code)){
-      st.spoken.add(code);
-      speakName(byCode[code].name);
-    }
+    speakName(byCode[code].name);
     const startRect = el.getBoundingClientRect();
     const ghost = makePinEl(byCode[code].name, "dragging");
     ghost.style.position = "fixed";
