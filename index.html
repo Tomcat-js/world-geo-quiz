@@ -469,13 +469,38 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
   }
 
   /* ---- Speech (Web Speech API) ---- */
+  let cachedVoice = null;
+  function pickBestVoice(){
+    if(!("speechSynthesis" in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    if(!voices.length) return null;
+    const find = (test) => voices.find(test);
+    const nameHas = (v, s) => v.name.toLowerCase().includes(s);
+    return (
+      // Modern "Natural"/"Neural"/"Online" voices (Edge, some mobile browsers) sound human, not robotic
+      find(v => /natural|neural|online/.test(v.name.toLowerCase()) && v.lang.toLowerCase().startsWith("en")) ||
+      // Chrome's "Google US/UK English" voices are network-quality, much clearer than offline defaults
+      find(v => nameHas(v, "google") && v.lang.toLowerCase().startsWith("en")) ||
+      // Avoid known low-quality offline engines (eSpeak-based) if anything else English is available
+      find(v => v.lang.toLowerCase().startsWith("en") && !nameHas(v, "espeak") && !nameHas(v, "pico")) ||
+      find(v => v.lang.toLowerCase().startsWith("en")) ||
+      voices[0]
+    );
+  }
+  if("speechSynthesis" in window){
+    cachedVoice = pickBestVoice();
+    window.speechSynthesis.onvoiceschanged = () => { cachedVoice = pickBestVoice(); };
+  }
   function speakName(name){
     if(!("speechSynthesis" in window)) return;
     try{
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(name);
-      utter.lang = "en-US";
-      utter.rate = 0.9;
+      const voice = cachedVoice || pickBestVoice();
+      if(voice){ utter.voice = voice; utter.lang = voice.lang; }
+      else { utter.lang = "en-US"; }
+      utter.rate = 0.92;
+      utter.pitch = 1;
       window.speechSynthesis.speak(utter);
     }catch(e){ /* speech not available, fail silently */ }
   }
