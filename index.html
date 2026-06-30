@@ -604,24 +604,74 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
       attachDrag(pin, code);
       pinsLayer.appendChild(pin);
     });
-    st.solved.forEach(code => {
+    const wrapRect = mapWrap.getBoundingClientRect();
+    const lockedPins = [];
+
+    function addLockedPin(code, cls){
       const c = byCode[code];
       if(!c) return;
-      const pin = makePinEl(c.name, "locked");
+      const pin = makePinEl(c.name, cls);
       const pct = svgPointToPct(c.cx, c.cy);
       pin.style.left = pct.xPct + "%";
       pin.style.top = pct.yPct + "%";
       pinsLayer.appendChild(pin);
+      if(wrapRect.width && wrapRect.height){
+        const rect = pin.getBoundingClientRect();
+        const x = (pct.xPct / 100) * wrapRect.width;
+        const y = (pct.yPct / 100) * wrapRect.height;
+        lockedPins.push({ el: pin, w: rect.width, h: rect.height, x, y, baseX: x, baseY: y });
+      }
+    }
+    st.solved.forEach(code => addLockedPin(code, "locked"));
+    st.wrong.forEach(code => addLockedPin(code, "wrong"));
+
+    declutterLockedPins(lockedPins, wrapRect);
+  }
+
+  /* Nudge overlapping solved/revealed pins apart so dense clusters of small
+     countries (e.g. West Africa) stay readable. Each label is allowed to
+     drift a small, capped distance from its true map point. */
+  function declutterLockedPins(pins, wrapRect){
+    if(pins.length < 2 || !wrapRect.width) return;
+    const MAX_DRIFT = 36;
+    const PASSES = 24;
+    for(let pass = 0; pass < PASSES; pass++){
+      let moved = false;
+      for(let i = 0; i < pins.length; i++){
+        for(let j = i + 1; j < pins.length; j++){
+          const a = pins[i], b = pins[j];
+          const ra = { left: a.x - a.w/2, right: a.x + a.w/2, top: a.y - a.h, bottom: a.y };
+          const rb = { left: b.x - b.w/2, right: b.x + b.w/2, top: b.y - b.h, bottom: b.y };
+          const overlapX = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+          const overlapY = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+          if(overlapX > -3 && overlapY > -3){
+            let dx = a.x - b.x;
+            let dy = a.y - b.y;
+            if(Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5){ dx = 1; dy = (i % 2 === 0 ? 1 : -1); }
+            const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+            const ux = dx / dist, uy = dy / dist;
+            const push = (Math.max(overlapX, overlapY, 4) / 2) + 2;
+            a.x = clampDrift(a.x + ux * push * 0.5, a.baseX, MAX_DRIFT);
+            a.y = clampDrift(a.y + uy * push * 0.5, a.baseY, MAX_DRIFT);
+            b.x = clampDrift(b.x - ux * push * 0.5, b.baseX, MAX_DRIFT);
+            b.y = clampDrift(b.y - uy * push * 0.5, b.baseY, MAX_DRIFT);
+            moved = true;
+          }
+        }
+      }
+      if(!moved) break;
+    }
+    pins.forEach(p => {
+      p.el.style.left = (p.x / wrapRect.width * 100) + "%";
+      p.el.style.top = (p.y / wrapRect.height * 100) + "%";
     });
-    st.wrong.forEach(code => {
-      const c = byCode[code];
-      if(!c) return;
-      const pin = makePinEl(c.name, "wrong");
-      const pct = svgPointToPct(c.cx, c.cy);
-      pin.style.left = pct.xPct + "%";
-      pin.style.top = pct.yPct + "%";
-      pinsLayer.appendChild(pin);
-    });
+  }
+
+  function clampDrift(value, base, max){
+    const d = value - base;
+    if(d > max) return base + max;
+    if(d < -max) return base - max;
+    return value;
   }
 
   function svgPointToPct(x, y){
