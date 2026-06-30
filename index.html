@@ -81,6 +81,7 @@
     transition:fill .15s ease, stroke .15s ease;
   }
   .map-wrap path.country.solved{fill:#a9d6a1; pointer-events:none;}
+  .map-wrap path.country.wrong{fill:#e6a1a6; pointer-events:none;}
   .map-wrap path.country.flash-bad{fill:#f3b6bd;}
   .map-wrap path.country.hover{fill:#ffe066; stroke:#e6a400; stroke-width:2.2;}
   .pins-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
@@ -117,6 +118,10 @@
   .pin.wrong-flash .pin-card{border-color:var(--bad); background:#fde7ea; color:var(--bad);}
   .pin.wrong-flash .pin-tip{border-top-color:var(--bad);}
   .pin.wrong-flash .pin-tip::after{border-top-color:#fde7ea;}
+  .pin.wrong .pin-card{border-color:var(--bad); color:#8a2a36; background:#fde7ea; box-shadow:none;}
+  .pin.wrong .pin-tip{border-top-color:var(--bad);}
+  .pin.wrong .pin-tip::after{border-top-color:#fde7ea;}
+  .pin.wrong{cursor:default;}
   .pin.dragging{z-index:50; cursor:grabbing; pointer-events:none;}
   .pin.dragging .pin-card{box-shadow:0 6px 14px rgba(0,0,0,0.3);}
   .tray-wrap{width:100%;max-width:900px;padding:6px 10px 18px;}
@@ -183,6 +188,7 @@
 
   <div class="statbar">
     <span class="pill correct">✅ <span id="stat-correct">0</span> / <span id="stat-total">0</span></span>
+    <span class="pill wrong">📍 <span id="stat-revealed">0</span> revealed</span>
     <span class="pill wrong">Attempts: <span id="stat-attempts">0</span></span>
   </div>
 
@@ -196,7 +202,7 @@
       <button class="action" id="checkBtn">Check answers</button>
       <button class="secondary" id="resetBtn">Restart this continent</button>
     </div>
-    <p class="hint">Drag a name tile onto the country you think it is, then press <b>Check answers</b>. Correct ones lock onto the map in green. Wrong ones go back to the list, and new countries take their place.</p>
+    <p class="hint">Drag a name tile onto the country you think it is, then press <b>Check answers</b>. Correct ones lock onto the map in green. Wrong ones get revealed on their real country in red &mdash; so you can learn it &mdash; and new countries take their place.</p>
   </main>
 
   <div class="tray-wrap">
@@ -450,6 +456,7 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
   const winStats = document.getElementById("winStats");
   const statCorrect = document.getElementById("stat-correct");
   const statTotal = document.getElementById("stat-total");
+  const statRevealed = document.getElementById("stat-revealed");
   const statAttempts = document.getElementById("stat-attempts");
   const gameTitle = document.getElementById("gameTitle");
 
@@ -473,6 +480,7 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
       active: [],
       placements: {},
       solved: new Set(),
+      wrong: new Set(),
       attempts: 0
     };
   }
@@ -523,6 +531,7 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
   function updateStats(){
     const st = state();
     statCorrect.textContent = st.solved.size;
+    statRevealed.textContent = st.wrong.size;
     statAttempts.textContent = st.attempts;
   }
 
@@ -537,7 +546,10 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
     const st = state();
     Object.keys(byCode).forEach(code => {
       const p = pathFor(code);
-      if(p) p.classList.toggle("solved", st.solved.has(code));
+      if(p){
+        p.classList.toggle("solved", st.solved.has(code));
+        p.classList.toggle("wrong", st.wrong.has(code));
+      }
     });
   }
 
@@ -596,6 +608,15 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
       const c = byCode[code];
       if(!c) return;
       const pin = makePinEl(c.name, "locked");
+      const pct = svgPointToPct(c.cx, c.cy);
+      pin.style.left = pct.xPct + "%";
+      pin.style.top = pct.yPct + "%";
+      pinsLayer.appendChild(pin);
+    });
+    st.wrong.forEach(code => {
+      const c = byCode[code];
+      if(!c) return;
+      const pin = makePinEl(c.name, "wrong");
       const pct = svgPointToPct(c.cx, c.cy);
       pin.style.left = pct.xPct + "%";
       pin.style.top = pct.yPct + "%";
@@ -689,19 +710,25 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
       const p = pathFor(code);
       if(p) p.classList.add("solved");
     });
+    // Brief flash on the wrong spot they actually dropped on. The tile will
+    // then settle permanently onto its real country, revealed in red, so
+    // the player can learn where it actually is.
     wrongCodes.forEach(code => {
-      const p = pathFor(st.placements[code].hitCode);
-      if(p){
-        p.classList.add("flash-bad");
-        setTimeout(() => p.classList.remove("flash-bad"), 600);
+      const droppedOn = st.placements[code].hitCode;
+      if(droppedOn){
+        const p = pathFor(droppedOn);
+        if(p){
+          p.classList.add("flash-bad");
+          setTimeout(() => p.classList.remove("flash-bad"), 600);
+        }
       }
     });
 
     setTimeout(() => {
       correctCodes.forEach(code => { st.solved.add(code); delete st.placements[code]; });
-      wrongCodes.forEach(code => { delete st.placements[code]; });
+      wrongCodes.forEach(code => { st.wrong.add(code); delete st.placements[code]; });
 
-      st.active = st.active.filter(code => !correctCodes.includes(code));
+      st.active = st.active.filter(code => !correctCodes.includes(code) && !wrongCodes.includes(code));
       const need = ACTIVE_SIZE - st.active.length;
       const refill = st.pool.splice(0, Math.min(need, st.pool.length));
       st.active = st.active.concat(refill);
@@ -709,8 +736,8 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
       renderAll();
       refreshWorldBadges();
 
-      if(st.solved.size === ds.countries.length){
-        winStats.textContent = "You solved all " + ds.countries.length + " countries in " + st.attempts + " checks.";
+      if(st.solved.size + st.wrong.size === ds.countries.length){
+        winStats.textContent = "You correctly placed " + st.solved.size + " of " + ds.countries.length + " countries (" + st.attempts + " checks).";
         winOverlay.classList.add("show");
       }
     }, correctCodes.length || wrongCodes.length ? 450 : 0);
