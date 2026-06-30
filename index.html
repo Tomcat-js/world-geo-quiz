@@ -713,9 +713,12 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
     }
 
     gameTitle.textContent = ds.title;
-    backBtn.textContent = (currentGameParent !== "world" && REGION_GROUPS[currentGameParent])
-      ? "← " + (REGION_META[id] ? REGION_META[id].label.split(" ")[0] + " regions" : "Regions")
-      : "← World map";
+    if(currentGameParent !== "world" && REGION_GROUPS[currentGameParent]){
+      const parentEntry = WORLD_CONTINENTS.find(w => w.id === currentGameParent);
+      backBtn.textContent = "← " + (parentEntry ? parentEntry.name : "Regions") + " regions";
+    } else {
+      backBtn.textContent = "← World map";
+    }
     statTotal.textContent = ds.countries.length;
     svg.setAttribute("viewBox", ds.viewBox);
     mapWrap.style.aspectRatio = ds.viewBox.split(" ").slice(2).join("/").replace(" ", "/");
