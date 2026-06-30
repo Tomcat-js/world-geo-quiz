@@ -114,15 +114,15 @@
   }
   .pin.locked .pin-tip{border-top-color:var(--good);}
   .pin.locked .pin-tip::after{border-top-color:#eaf8ea;}
-  .pin.locked{cursor:default;}
+  .pin.locked{cursor:default; z-index:3;}
   .pin.wrong-flash .pin-card{border-color:var(--bad); background:#fde7ea; color:var(--bad);}
   .pin.wrong-flash .pin-tip{border-top-color:var(--bad);}
   .pin.wrong-flash .pin-tip::after{border-top-color:#fde7ea;}
   .pin.wrong .pin-card{border-color:var(--bad); color:#8a2a36; background:#fde7ea; box-shadow:none;}
   .pin.wrong .pin-tip{border-top-color:var(--bad);}
   .pin.wrong .pin-tip::after{border-top-color:#fde7ea;}
-  .pin.wrong{cursor:default;}
-  .pin.dragging{z-index:50; cursor:grabbing; pointer-events:none;}
+  .pin.wrong{cursor:default; z-index:3;}
+  .pin.dragging{z-index:9999; cursor:grabbing; pointer-events:none;}
   .pin.dragging .pin-card{box-shadow:0 6px 14px rgba(0,0,0,0.3);}
   .tray-wrap{width:100%;max-width:900px;padding:6px 10px 18px;}
   .tray-label{text-align:center;font-size:0.82rem;color:#4a5a5a;margin:2px 0 8px;}
@@ -146,13 +146,6 @@
   .controls{display:flex;justify-content:center;gap:12px;margin:6px 0 4px;flex-wrap:wrap;}
   .hint{text-align:center;font-size:0.8rem;color:#637373;max-width:640px;margin:0 auto 4px;}
   footer{font-size:0.72rem;color:#7c8a8a;text-align:center;padding:10px;}
-  .win-overlay{
-    position:fixed;inset:0;background:rgba(20,40,40,0.55);display:none;
-    align-items:center;justify-content:center;z-index:100;padding:20px;
-  }
-  .win-overlay.show{display:flex;}
-  .win-card{background:#fff;border-radius:16px;padding:28px 32px;max-width:380px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.3);}
-  .win-card h2{margin-top:0;}
   @media (max-width:480px){
     .slot{width:42%;}
     h1{font-size:1.25rem;}
@@ -212,14 +205,6 @@
 </section>
 
 <footer>MVP build &mdash; Africa is playable now, other continents are coming soon.</footer>
-
-<div class="win-overlay" id="winOverlay">
-  <div class="win-card">
-    <h2>🎉 You mapped it all!</h2>
-    <p id="winStats"></p>
-    <button class="action" id="playAgainBtn">Play again</button>
-  </div>
-</div>
 
 <div class="toast" id="toast"></div>
 
@@ -377,11 +362,11 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
   const toastEl = document.getElementById("toast");
 
   let toastTimer = null;
-  function showToast(msg){
+  function showToast(msg, duration){
     toastEl.textContent = msg;
     toastEl.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), duration || 1800);
   }
 
   function showScreen(name){
@@ -451,9 +436,6 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
   const checkBtn = document.getElementById("checkBtn");
   const resetBtn = document.getElementById("resetBtn");
   const backBtn = document.getElementById("backBtn");
-  const playAgainBtn = document.getElementById("playAgainBtn");
-  const winOverlay = document.getElementById("winOverlay");
-  const winStats = document.getElementById("winStats");
   const statCorrect = document.getElementById("stat-correct");
   const statTotal = document.getElementById("stat-total");
   const statRevealed = document.getElementById("stat-revealed");
@@ -502,7 +484,6 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
     svg.setAttribute("viewBox", ds.viewBox);
     mapWrap.style.aspectRatio = ds.viewBox.split(" ").slice(2).join("/").replace(" ", "/");
 
-    winOverlay.classList.remove("show");
     buildMap(ds.countries);
     renderAll();
     showScreen("game");
@@ -787,8 +768,7 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
       refreshWorldBadges();
 
       if(st.solved.size + st.wrong.size === ds.countries.length){
-        winStats.textContent = "You correctly placed " + st.solved.size + " of " + ds.countries.length + " countries (" + st.attempts + " checks).";
-        winOverlay.classList.add("show");
+        showToast("All " + ds.countries.length + " countries done — " + st.solved.size + " correct. Look over the map, then hit Restart to play again.", 4500);
       }
     }, correctCodes.length || wrongCodes.length ? 450 : 0);
   }
@@ -800,19 +780,9 @@ if (typeof module !== "undefined") module.exports = WORLD_CONTINENTS;
       const st = freshState(ds.countries);
       st.active = st.pool.splice(0, ACTIVE_SIZE);
       gameState[currentId] = st;
-      winOverlay.classList.remove("show");
       renderAll();
       refreshWorldBadges();
     }
-  });
-  playAgainBtn.addEventListener("click", () => {
-    const ds = CONTINENT_DATASETS[currentId];
-    const st = freshState(ds.countries);
-    st.active = st.pool.splice(0, ACTIVE_SIZE);
-    gameState[currentId] = st;
-    winOverlay.classList.remove("show");
-    renderAll();
-    refreshWorldBadges();
   });
   backBtn.addEventListener("click", () => {
     showScreen("world");
