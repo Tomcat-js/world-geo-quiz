@@ -1051,6 +1051,8 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
     const startRect = el.getBoundingClientRect();
     const ghost = makePinEl(byCode[code].name, "dragging");
     ghost.style.position = "fixed";
+    ghost.style.transform = "translate(-50%, -50%)";
+    ghost.style.pointerEvents = "none";
     ghost.style.left = (startRect.left + startRect.width/2) + "px";
     ghost.style.top = (startRect.top + startRect.height/2) + "px";
     document.body.appendChild(ghost);
