@@ -1049,9 +1049,9 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
     ev.preventDefault();
     speakName(byCode[code].name);
     const startRect = el.getBoundingClientRect();
+    const startX = ev.clientX, startY = ev.clientY;
     const ghost = makePinEl(byCode[code].name, "dragging");
     ghost.style.position = "fixed";
-    ghost.style.transform = "translate(-50%, -50%)";
     ghost.style.pointerEvents = "none";
     ghost.style.left = (startRect.left + startRect.width/2) + "px";
     ghost.style.top = (startRect.top + startRect.height/2) + "px";
@@ -1069,6 +1069,8 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
       const dropEl = document.elementFromPoint(e.clientX, e.clientY);
       ghost.remove();
       el.style.visibility = "visible";
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if(dx*dx + dy*dy < 40*40){ delete state().placements[code]; renderAll(); return; }
       handleDrop(code, e.clientX, e.clientY, dropEl);
     }
     document.addEventListener("pointermove", move);
@@ -1312,6 +1314,7 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
     ev.preventDefault();
     speakName(item.label);
     const startRect = tile.getBoundingClientRect();
+    const startX = ev.clientX, startY = ev.clientY;
     const ghost = document.createElement("div");
     ghost.className = "wq-tile";
     ghost.textContent = item.label;
@@ -1343,6 +1346,8 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
       ghost.remove();
       tile.style.visibility = "visible";
       ghost.style.display = "none";
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if(dx*dx + dy*dy < 40*40) return;
       const el = document.elementFromPoint(e.clientX, e.clientY);
       const droppedId = el && el.getAttribute && el.getAttribute("data-wq-id");
       if(droppedId === item.id){
