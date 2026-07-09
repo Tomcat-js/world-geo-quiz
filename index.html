@@ -1056,7 +1056,7 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
 
   function svgPointToPct(x, y){
     const vb = svg.getAttribute("viewBox").split(" ").map(Number);
-    return { xPct: (x/vb[2])*100, yPct: (y/vb[3])*100 };
+    return { xPct: ((x-vb[0])/vb[2])*100, yPct: ((y-vb[1])/vb[3])*100 };
   }
 
   /* ---- Drag handling (pointer events, mouse+touch+pen) ---- */
