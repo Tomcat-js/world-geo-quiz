@@ -188,9 +188,7 @@
   .wq-tray{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;
     min-height:52px;padding:10px;border:2px dashed #b9cccc;border-radius:14px;background:#f5fafa;
     touch-action:none;}
-  .wq-tile{padding:6px 14px;font-size:0.85rem;font-weight:700;cursor:grab;user-select:none;
-    background:var(--tile);border:2px solid var(--tile-border);border-radius:8px;
-    box-shadow:0 2px 5px rgba(0,0,0,0.18);touch-action:none;white-space:nowrap;}
+  .wq-tile{display:flex;flex-direction:column;align-items:center;cursor:grab;user-select:none;touch-action:none;}
   .wq-hint{text-align:center;font-size:0.8rem;color:#637373;max-width:640px;margin:2px auto 8px;}
 </style>
 </head>
@@ -1292,20 +1290,7 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
         lbl.textContent = item.label;
         wqSvg.appendChild(lbl);
       }
-      // Always show a small pointer arrow at the centroid (faint if unnamed, solid if named)
-      const arr = document.createElementNS(SVG_NS, "text");
-      arr.setAttribute("x", item.cx);
-      arr.setAttribute("y", named ? item.cy + 15 : item.cy + 6);
-      arr.setAttribute("text-anchor", "middle");
-      arr.setAttribute("font-size", "10");
-      arr.setAttribute("font-weight", "700");
-      arr.setAttribute("fill", named ? "#fff" : "rgba(0,0,0,0.25)");
-      arr.setAttribute("stroke", named ? "rgba(0,0,0,0.3)" : "none");
-      arr.setAttribute("stroke-width", "1.5");
-      arr.setAttribute("paint-order", "stroke");
-      arr.setAttribute("pointer-events", "none");
-      arr.textContent = "▼";
-      wqSvg.appendChild(arr);
+
     });
   }
 
@@ -1327,8 +1312,14 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
     shuffled.forEach(item => {
       const tile = document.createElement("div");
       tile.className = "wq-tile";
-      tile.textContent = item.label;
       tile.dataset.wqId = item.id;
+      const tileCard = document.createElement("div");
+      tileCard.className = "pin-card";
+      tileCard.textContent = item.label;
+      tile.appendChild(tileCard);
+      const tileTip = document.createElement("div");
+      tileTip.className = "pin-tip";
+      tile.appendChild(tileTip);
       attachWqDrag(tile, item);
       wqTray.appendChild(tile);
     });
@@ -1369,10 +1360,16 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
     const startX = ev.clientX, startY = ev.clientY;
     const ghost = document.createElement("div");
     ghost.className = "wq-tile";
-    ghost.textContent = item.label;
-    ghost.style.cssText = "position:fixed;pointer-events:none;opacity:0.88;z-index:9999;transform:translate(-50%,-50%);";
+    ghost.style.cssText = "position:fixed;pointer-events:none;opacity:0.88;z-index:9999;transform:translate(-50%,-100%);";
+    const ghostCard = document.createElement("div");
+    ghostCard.className = "pin-card";
+    ghostCard.textContent = item.label;
+    ghost.appendChild(ghostCard);
+    const ghostTip = document.createElement("div");
+    ghostTip.className = "pin-tip";
+    ghost.appendChild(ghostTip);
     ghost.style.left = (startRect.left + startRect.width/2) + "px";
-    ghost.style.top = (startRect.top + startRect.height/2) + "px";
+    ghost.style.top = (startRect.top + startRect.height) + "px";
     document.body.appendChild(ghost);
     tile.style.visibility = "hidden";
     let hoverEl = null;
