@@ -44,12 +44,18 @@
   .screen.show{display:flex;}
 
   /* World map screen */
+  #screen-world{background:#050810;}
+  #screen-world header h1{color:#e8f0ff;}
+  #screen-world header .subtitle{color:#8aabcc;}
   .world-wrap{
-    position:relative;width:min(880px,94vw);aspect-ratio:1000/500;
-    margin:10px auto 8px;background:var(--sea);border-radius:14px;
-    box-shadow:0 4px 18px rgba(0,0,0,0.12);overflow:hidden;
+    position:relative;width:min(560px,88vw);aspect-ratio:1/1;
+    margin:8px auto 10px;border-radius:50%;
+    box-shadow:0 0 60px rgba(30,80,180,0.35), 0 0 120px rgba(10,30,80,0.5);
+    overflow:hidden;background:#000;
   }
-  .world-wrap svg{position:absolute;top:0;left:0;width:100%;height:100%;display:block;}
+  .world-wrap img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%;}
+  .world-wrap svg{display:none;}
+
   .continent{stroke:#33433f;stroke-width:1.4;cursor:pointer;transition:fill .15s ease, opacity .15s ease;}
   .continent.playable{fill:#7bbf6a;}
   .continent.playable:hover{fill:#67ad57;}
@@ -201,7 +207,8 @@
     <p class="subtitle">Tap a continent to start playing. More continents are on the way!</p>
   </header>
   <div class="world-wrap" id="worldWrap">
-    <svg id="worldSvg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg>
+    <img src="earth.jpg" alt="Earth from space" draggable="false">
+    <svg id="worldSvg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet" style="display:none"></svg>
   </div>
   <div class="legend">
     <span><span class="swatch" style="background:#7bbf6a;"></span> Ready to play</span>
