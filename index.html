@@ -1291,6 +1291,13 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
         lbl.setAttribute("class", "wq-label on-color");
         lbl.textContent = item.label;
         wqSvg.appendChild(lbl);
+        const arr = document.createElementNS(SVG_NS, "text");
+        arr.setAttribute("x", item.cx);
+        arr.setAttribute("y", item.cy + 15);
+        arr.setAttribute("class", "wq-label on-color");
+        arr.setAttribute("font-size", "8");
+        arr.textContent = "▼";
+        wqSvg.appendChild(arr);
       }
     });
   }
