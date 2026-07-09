@@ -1291,14 +1291,21 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
         lbl.setAttribute("class", "wq-label on-color");
         lbl.textContent = item.label;
         wqSvg.appendChild(lbl);
-        const arr = document.createElementNS(SVG_NS, "text");
-        arr.setAttribute("x", item.cx);
-        arr.setAttribute("y", item.cy + 15);
-        arr.setAttribute("class", "wq-label on-color");
-        arr.setAttribute("font-size", "8");
-        arr.textContent = "▼";
-        wqSvg.appendChild(arr);
       }
+      // Always show a small pointer arrow at the centroid (faint if unnamed, solid if named)
+      const arr = document.createElementNS(SVG_NS, "text");
+      arr.setAttribute("x", item.cx);
+      arr.setAttribute("y", named ? item.cy + 15 : item.cy + 6);
+      arr.setAttribute("text-anchor", "middle");
+      arr.setAttribute("font-size", "10");
+      arr.setAttribute("font-weight", "700");
+      arr.setAttribute("fill", named ? "#fff" : "rgba(0,0,0,0.25)");
+      arr.setAttribute("stroke", named ? "rgba(0,0,0,0.3)" : "none");
+      arr.setAttribute("stroke-width", "1.5");
+      arr.setAttribute("paint-order", "stroke");
+      arr.setAttribute("pointer-events", "none");
+      arr.textContent = "▼";
+      wqSvg.appendChild(arr);
     });
   }
 
