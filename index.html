@@ -374,6 +374,13 @@ var AFRICA_COUNTRIES = [
 
 // viewBox: 0 0 1000 926.64
 if (typeof module !== "undefined" && module.exports) { module.exports = { AFRICA_COUNTRIES }; }
+var NORTH_AFRICA_CODES = new Set(["MAR","DZA","TUN","LBY","EGY","MRT","MLI","NER","TCD","SDN","ERI","DJI","SOM","ETH","CPV"]);
+var NORTH_AFRICA_COUNTRIES = AFRICA_COUNTRIES.filter(function(c){ return NORTH_AFRICA_CODES.has(c.code); });
+var SUBSAHARA_COUNTRIES = AFRICA_COUNTRIES.filter(function(c){ return !NORTH_AFRICA_CODES.has(c.code); });
+var AFRICA_REGIONS = {
+  "north-africa": { countries: NORTH_AFRICA_COUNTRIES, viewBox: "8.3 6.2 916.7 518.1", title: "North Africa Quiz" },
+  "sub-saharan-africa": { countries: SUBSAHARA_COUNTRIES, viewBox: "97.9 277.7 893.8 642.7", title: "Sub-Saharan Africa Quiz" }
+};
 
 /* ===== END COUNTRY DATA ===== */
 </script>
@@ -639,10 +646,13 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
   /* Continents that are broken into smaller sub-region quizzes instead of one big map.
      Listed in display order for the region-select screen. */
   const REGION_GROUPS = {
+    "africa": ["north-africa", "sub-saharan-africa"],
     "asia": ["east-asia", "southeast-asia", "south-asia", "central-asia", "middle-east"],
     "europe": ["west-europe", "north-europe", "south-europe", "east-europe"]
   };
   const REGION_META = {
+    "north-africa": { label: "North Africa", emoji: "🏜️" },
+    "sub-saharan-africa": { label: "Sub-Saharan Africa", emoji: "🌍" },
     "east-asia": { label: "East Asia", emoji: "🏯" },
     "southeast-asia": { label: "Southeast Asia", emoji: "🌴" },
     "south-asia": { label: "South Asia", emoji: "🕌" },
@@ -657,9 +667,9 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
   /* Per-game datasets. Africa is one flat continent map; Asia is split into
      5 region datasets (each behaves exactly like a "continent" game). */
   const CONTINENT_DATASETS = {
-    "africa": { countries: AFRICA_COUNTRIES, viewBox: "0 0 1000 926.64", title: "Africa Map Quiz" },
     "south-america": { countries: SOUTH_AMERICA_COUNTRIES, viewBox: "0 0 1000 1487", title: "South America Map Quiz" }
   };
+  Object.keys(AFRICA_REGIONS).forEach(id => { CONTINENT_DATASETS[id] = AFRICA_REGIONS[id]; });
   Object.keys(ASIA_REGIONS).forEach(id => { CONTINENT_DATASETS[id] = ASIA_REGIONS[id]; });
   Object.keys(EUROPE_REGIONS).forEach(id => { CONTINENT_DATASETS[id] = EUROPE_REGIONS[id]; });
 
@@ -1367,8 +1377,7 @@ if (typeof module !== "undefined") module.exports = WORLD_QUIZ_ITEMS;
     if(!wqNamed.has(item.id)) return;
     if(item.type === "region-live"){
       if(item.id === "africa"){
-        currentGameParent = "world-quiz";
-        openContinent("africa");
+        openRegionSelect("africa", "world-quiz");
       } else if(item.id === "s-america"){
         currentGameParent = "world-quiz";
         openContinent("south-america");
